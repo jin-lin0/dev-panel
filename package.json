@@ -1,0 +1,26 @@
+{
+  "name": "dev-panel",
+  "version": "0.1.0",
+  "description": "Web Dashboard with built-in MCP tools for local development",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "setup": "npm install && cd frontend && npm install",
+    "build": "tsc && cd frontend && npm run build",
+    "start": "node dist/index.js",
+    "dev": "concurrently \"npx tsx --watch src/index.ts\" \"cd frontend && node build.mjs --watch\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "concurrently": "^9.2.3",
+    "prettier": "^3.8.4",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
