@@ -1,0 +1,1708 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>如何让网页 GPT 操作本地开发环境｜dev-panel 技术分享</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --ink: #18212f;
+        --muted: #667085;
+        --line: #e5e9f0;
+        --brand: #3157d5;
+        --brand-soft: #edf1ff;
+        --green: #147d64;
+        --amber: #a15c06;
+        --shadow: 0 12px 40px rgba(25, 35, 58, 0.08);
+        --sidebar-width: 286px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--bg);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          "PingFang SC",
+          "Microsoft YaHei",
+          sans-serif;
+        line-height: 1.72;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 20;
+        width: var(--sidebar-width);
+        padding: 28px 20px;
+        overflow-y: auto;
+        color: #e8edff;
+        background: #111a31;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 8px 26px;
+      }
+
+      .logo-mark {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #5476ee, #7b5bda);
+        box-shadow: 0 8px 24px rgba(70, 102, 222, 0.35);
+        font-weight: 800;
+      }
+
+      .logo strong {
+        display: block;
+        font-size: 15px;
+      }
+      .logo small {
+        color: #98a5c7;
+        font-size: 11px;
+      }
+      .github-link {
+        position: absolute;
+        top: 30px;
+        right: 20px;
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        color: #aeb9d7;
+        background: rgba(255, 255, 255, 0.04);
+        transition: 160ms ease;
+      }
+      .github-link:hover {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-1px);
+      }
+      .github-link svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+
+      .nav-label {
+        margin: 18px 12px 8px;
+        color: #7583a8;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 3px 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        color: #b6c0dc;
+        text-decoration: none;
+        transition: 160ms ease;
+      }
+
+      .nav-link:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .nav-link.active {
+        color: #fff;
+        background: #3157d5;
+      }
+      .nav-index {
+        width: 20px;
+        color: #8492b8;
+        font-size: 12px;
+      }
+      .nav-link.active .nav-index {
+        color: #cdd7ff;
+      }
+      .nav-link.sub {
+        margin-left: 14px;
+        padding: 7px 10px 7px 18px;
+        color: #8f9bbb;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .nav-link.sub::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        flex: 0 0 5px;
+        border-radius: 50%;
+        background: #53617f;
+      }
+      .nav-link.sub:hover {
+        color: #fff;
+      }
+      .nav-link.sub.active {
+        color: #fff;
+        background: rgba(49, 87, 213, 0.72);
+      }
+      .nav-link.sub.active::before {
+        background: #fff;
+      }
+
+      main {
+        width: min(1040px, calc(100% - var(--sidebar-width) - 64px));
+        margin-left: calc(var(--sidebar-width) + 32px);
+        padding: 32px 0 80px;
+      }
+
+      section {
+        scroll-margin-top: 24px;
+        margin-bottom: 24px;
+        padding: 38px 44px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      h3[id] {
+        scroll-margin-top: 24px;
+      }
+
+      .hero {
+        min-height: 520px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+        color: #fff;
+        border: none;
+        background:
+          radial-gradient(
+            circle at 85% 15%,
+            rgba(122, 102, 225, 0.65),
+            transparent 32%
+          ),
+          radial-gradient(
+            circle at 12% 92%,
+            rgba(45, 146, 197, 0.32),
+            transparent 35%
+          ),
+          #111a31;
+      }
+
+      .hero::after {
+        content: "MCP";
+        position: absolute;
+        right: -12px;
+        bottom: -70px;
+        color: rgba(255, 255, 255, 0.035);
+        font-size: 190px;
+        font-weight: 900;
+        letter-spacing: -0.08em;
+      }
+
+      .eyebrow {
+        color: #8fa8ff;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 800px;
+        margin: 18px 0 20px;
+        font-size: clamp(40px, 6vw, 70px);
+        line-height: 1.06;
+        letter-spacing: -0.045em;
+      }
+
+      .hero p {
+        max-width: 720px;
+        color: #bdc8e5;
+        font-size: 18px;
+      }
+
+      .meta {
+        display: flex;
+        gap: 12px;
+        margin-top: 28px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        padding: 7px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        color: #dce4fc;
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 13px;
+      }
+
+      h2 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        letter-spacing: -0.025em;
+      }
+      h3 {
+        margin: 28px 0 10px;
+        font-size: 19px;
+      }
+      p {
+        margin: 10px 0;
+      }
+      .lead {
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .quote {
+        margin: 22px 0;
+        padding: 18px 22px;
+        border-left: 4px solid var(--brand);
+        border-radius: 0 12px 12px 0;
+        color: #263451;
+        background: var(--brand-soft);
+        font-size: 17px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      .grid.two {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .card {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fbfcfe;
+      }
+      .card strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .number {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        margin-bottom: 12px;
+        place-items: center;
+        border-radius: 9px;
+        color: var(--brand);
+        background: var(--brand-soft);
+        font-weight: 800;
+      }
+
+      .diagram {
+        margin: 24px 0;
+        padding: 24px;
+        border: 1px solid #dfe5f0;
+        border-radius: 16px;
+        background: #f8faff;
+      }
+
+      .flow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .node {
+        min-width: 150px;
+        padding: 14px 18px;
+        border: 1px solid #ccd5e5;
+        border-radius: 12px;
+        text-align: center;
+        background: #fff;
+        box-shadow: 0 5px 16px rgba(36, 50, 80, 0.06);
+      }
+      .node.accent {
+        color: #fff;
+        border-color: var(--brand);
+        background: var(--brand);
+      }
+      .arrow {
+        color: #7f8ba3;
+        font-size: 22px;
+      }
+
+      table {
+        width: 100%;
+        margin: 20px 0;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+      }
+      th {
+        color: var(--muted);
+        background: #f8f9fc;
+        font-size: 13px;
+      }
+
+      ol.timeline {
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+      .timeline li {
+        position: relative;
+        margin-left: 18px;
+        padding: 0 0 22px 34px;
+        border-left: 2px solid #dbe2ef;
+        counter-increment: step;
+      }
+      .timeline li::before {
+        content: counter(step);
+        position: absolute;
+        top: 0;
+        left: -15px;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 50%;
+        color: #fff;
+        background: var(--brand);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .timeline li:last-child {
+        border-left-color: transparent;
+        padding-bottom: 0;
+      }
+
+      .callout {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-radius: 12px;
+        color: #64410b;
+        background: #fff5dc;
+      }
+      .callout.green {
+        color: #075e4b;
+        background: #e9f8f3;
+      }
+      code {
+        padding: 2px 6px;
+        border-radius: 5px;
+        background: #eef1f6;
+        font-size: 0.9em;
+      }
+
+      pre {
+        margin: 18px 0;
+        padding: 20px 22px;
+        overflow-x: auto;
+        border: 1px solid #273452;
+        border-radius: 14px;
+        color: #dfe7ff;
+        background: #111a31;
+        font:
+          13px/1.65 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          monospace;
+      }
+      pre code {
+        padding: 0;
+        color: inherit;
+        background: transparent;
+      }
+      .tag {
+        display: inline-block;
+        margin: 3px 4px 3px 0;
+        padding: 4px 9px;
+        border-radius: 999px;
+        color: var(--brand);
+        background: var(--brand-soft);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .big-point {
+        margin: 26px 0;
+        padding: 24px 26px;
+        border-radius: 16px;
+        color: #fff;
+        background: linear-gradient(135deg, #3157d5, #654dc4);
+        font-size: 21px;
+        font-weight: 700;
+        line-height: 1.55;
+      }
+      .compare {
+        display: grid;
+        grid-template-columns: 1fr 52px 1fr;
+        gap: 12px;
+        align-items: stretch;
+      }
+      .compare-arrow {
+        display: grid;
+        place-items: center;
+        color: var(--brand);
+        font-size: 26px;
+      }
+      .layer {
+        margin: 8px 0;
+        padding: 16px 18px;
+        border-left: 5px solid var(--brand);
+        border-radius: 10px;
+        background: #f7f9fe;
+      }
+      .layer:nth-child(2) {
+        border-color: #6a52c7;
+      }
+      .layer:nth-child(3) {
+        border-color: #16856c;
+      }
+      .layer:nth-child(4) {
+        border-color: #d38218;
+      }
+      .layer:nth-child(5) {
+        border-color: #b64a57;
+      }
+      .layer strong {
+        display: inline-block;
+        min-width: 110px;
+      }
+      .video-player {
+        display: block;
+        width: 100%;
+        margin: 22px 0;
+        border: 1px solid #263451;
+        border-radius: 16px;
+        background: #080d18;
+        box-shadow: 0 12px 34px rgba(17, 26, 49, 0.18);
+      }
+
+      .checklist {
+        padding: 0;
+        list-style: none;
+      }
+      .checklist li {
+        position: relative;
+        margin: 10px 0;
+        padding-left: 28px;
+      }
+      .checklist li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: var(--green);
+        font-weight: 900;
+      }
+
+      .risk-list {
+        padding: 0;
+        list-style: none;
+      }
+      .risk-list li {
+        margin: 10px 0;
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #fff4ef;
+      }
+
+      .mobile-toggle {
+        display: none;
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 30;
+        width: 42px;
+        height: 42px;
+        border: 0;
+        border-radius: 10px;
+        color: #fff;
+        background: #111a31;
+        font-size: 20px;
+      }
+
+      @media (max-width: 900px) {
+        .mobile-toggle {
+          display: block;
+        }
+        .sidebar {
+          transform: translateX(-100%);
+          transition: transform 200ms ease;
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        main {
+          width: calc(100% - 28px);
+          margin: 0 14px;
+          padding-top: 70px;
+        }
+        section {
+          padding: 28px 22px;
+        }
+        .grid,
+        .grid.two {
+          grid-template-columns: 1fr;
+        }
+        .compare {
+          grid-template-columns: 1fr;
+        }
+        .compare-arrow {
+          transform: rotate(90deg);
+        }
+        .hero {
+          min-height: 460px;
+        }
+      }
+
+      @media print {
+        .sidebar,
+        .mobile-toggle {
+          display: none;
+        }
+        body {
+          background: #fff;
+        }
+        main {
+          width: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        section {
+          break-inside: avoid;
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="mobile-toggle" aria-label="打开目录">☰</button>
+
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-mark">DP</div>
+        <div><strong>dev-panel</strong><small>分享</small></div>
+      </div>
+      <a
+        class="github-link"
+        href="https://github.com/jin-lin0/dev-panel"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="在 GitHub 查看 jin-lin0/dev-panel"
+        title="jin-lin0/dev-panel"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 .7a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2.23c-3.23.7-3.91-1.37-3.91-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.39.97.1-.75.4-1.27.74-1.56-2.58-.29-5.29-1.29-5.29-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.18A10.95 10.95 0 0 1 12 6.15c.98 0 1.95.13 2.87.39 2.2-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.75.12 3.04.73.8 1.17 1.83 1.17 3.08 0 4.4-2.72 5.38-5.3 5.67.42.36.79 1.07.79 2.16v3.23c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"
+          />
+        </svg>
+      </a>
+      <div class="nav-label">Contents</div>
+      <nav>
+        <a class="nav-link active" href="#cover"
+          ><span class="nav-index">00</span>主题</a
+        >
+        <a class="nav-link" href="#knowledge"
+          ><span class="nav-index">01</span>前置知识</a
+        >
+        <a class="nav-link sub" href="#knowledge-problem"
+          >1.1 项目要解决的问题</a
+        >
+        <a class="nav-link sub" href="#knowledge-why-mcp">1.2 为什么选择 MCP</a>
+        <a class="nav-link sub" href="#knowledge-roles">1.3 角色与核心能力</a>
+        <a class="nav-link sub" href="#knowledge-server">1.4 Server 如何实现</a>
+        <a class="nav-link sub" href="#knowledge-sdk">手写协议与官方 SDK</a>
+        <a class="nav-link sub" href="#knowledge-skill">1.5 MCP 与 Skill</a>
+        <a class="nav-link sub" href="#knowledge-jsonrpc">1.6 JSON-RPC</a>
+        <a class="nav-link sub" href="#knowledge-lifecycle"
+          >1.7 初始化与版本协商</a
+        >
+        <a class="nav-link sub" href="#knowledge-transport">1.8 传输方式</a>
+        <a class="nav-link sub" href="#knowledge-tunnel">1.9 内网穿透</a>
+        <a class="nav-link sub" href="#knowledge-network">网络概念对比</a>
+        <a class="nav-link" href="#workflow"
+          ><span class="nav-index">02</span>整体流程</a
+        >
+        <a class="nav-link sub" href="#workflow-overview">2.1 系统全景</a>
+        <a class="nav-link sub" href="#workflow-architecture">2.2 内部架构</a>
+        <a class="nav-link sub" href="#workflow-connect">2.3 接入流程</a>
+        <a class="nav-link sub" href="#workflow-toolcall"
+          >2.4 tools/call 执行</a
+        >
+        <a class="nav-link sub" href="#workflow-security">2.5 工具与安全边界</a>
+        <a class="nav-link" href="#showcase"
+          ><span class="nav-index">03</span>效果展示</a
+        >
+        <a class="nav-link" href="#summary"
+          ><span class="nav-index">04</span>总结</a
+        >
+        <a class="nav-link sub" href="#summary-boundary">当前边界</a>
+        <a class="nav-link sub" href="#summary-references">参考资料</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section id="cover" class="hero">
+        <div class="eyebrow">DEV-PANEL · WEB GPT × LOCAL MCP</div>
+        <h1>如何让网页 GPT<br />操作本地环境</h1>
+        <p>
+          通过 MCP 与反向隧道，把网页端 GPT 的模型能力连接到本地文件、Git
+          和命令执行环境。
+        </p>
+        <div class="meta">
+          <span class="pill">MCP</span> <span class="pill">JSON-RPC 2.0</span
+          ><span class="pill">Streamable HTTP</span>
+          <span class="pill">Cloudflare Tunnel</span
+          ><span class="pill">OAuth 2.1</span>
+        </div>
+      </section>
+
+      <section id="knowledge">
+        <div class="eyebrow">PART 01 · 26 MIN</div>
+        <h2>前置知识</h2>
+        <p class="lead">
+          先理解为什么需要 MCP，以及一个云端 AI
+          请求如何跨越网络边界，安全地抵达本地能力。
+        </p>
+
+        <h3 id="knowledge-problem">1.1 项目要解决的问题</h3>
+        <div class="big-point">
+          让网页端 GPT 应用通过 MCP 调用本地能力，减少对额外模型 API
+          额度的依赖，同时获得真实项目操作能力。
+        </div>
+        <div class="compare">
+          <div class="card">
+            <strong>只使用网页 GPT</strong>
+            <p>
+              模型与交互体验成熟，但看不到本地项目，依赖人工上传代码与日志。
+            </p>
+            <p>
+              <span class="tag">上下文静态</span
+              ><span class="tag">不能执行</span>
+            </p>
+          </div>
+          <div class="compare-arrow">→</div>
+          <div class="card">
+            <strong>网页 GPT + dev-panel</strong>
+            <p>
+              GPT 通过 MCP 主动搜索、读取、修改项目，并使用本地环境运行验证。
+            </p>
+            <p>
+              <span class="tag">动态上下文</span
+              ><span class="tag">任务闭环</span>
+            </p>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <strong>上下文静态</strong>
+            <p>上传什么才能看到什么；模型无法主动发现遗漏的关联文件。</p>
+          </div>
+          <div class="card">
+            <strong>操作无法闭环</strong>
+            <p>能生成代码建议，却不能确认文件是否写入、构建是否成功。</p>
+          </div>
+          <div class="card">
+            <strong>人工搬运易失真</strong>
+            <p>配置、依赖版本、关联实现和最新日志都可能被遗漏。</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>方案</th>
+              <th>模型来源</th>
+              <th>本地能力</th>
+              <th>主要限制</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>网页端 GPT</td>
+              <td>网页应用内置</td>
+              <td>默认没有</td>
+              <td>需要人工搬运上下文</td>
+            </tr>
+            <tr>
+              <td>本地 API Agent</td>
+              <td>模型 API</td>
+              <td>可以具备</td>
+              <td>消耗独立 API 额度</td>
+            </tr>
+            <tr>
+              <td><strong>网页 GPT + MCP</strong></td>
+              <td>网页应用内置</td>
+              <td>dev-panel 提供</td>
+              <td>需要处理连接与安全</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <strong>“减少额度依赖”的准确含义：</strong>不是绕过网页 GPT
+          的产品限制，而是避免为了获得本地工具能力，再额外运行一套持续消耗模型
+          API Token 的 Agent。
+        </div>
+
+        <h3 id="knowledge-why-mcp">1.2 为什么选择 MCP</h3>
+        <p>
+          MCP（Model Context Protocol）是 AI
+          应用连接外部数据与工具的标准协议。它不仅让系统“可以请求”，还让模型能够发现能力、理解参数并持续使用返回结果。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>方案</th>
+              <th>工具发现</th>
+              <th>参数约束</th>
+              <th>跨客户端复用</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>复制粘贴</td>
+              <td>无</td>
+              <td>无</td>
+              <td>低</td>
+            </tr>
+            <tr>
+              <td>自定义 REST API</td>
+              <td>依赖额外文档</td>
+              <td>自行约定</td>
+              <td>低</td>
+            </tr>
+            <tr>
+              <td>Function Calling</td>
+              <td>应用内定义</td>
+              <td>JSON Schema</td>
+              <td>依赖具体应用</td>
+            </tr>
+            <tr>
+              <td><strong>MCP</strong></td>
+              <td>标准 tools/list</td>
+              <td>JSON Schema</td>
+              <td>高</td>
+            </tr>
+          </tbody>
+        </table>
+        <ul class="checklist">
+          <li><code>initialize</code>：建立连接并协商协议版本与能力。</li>
+          <li>
+            <code>tools/list</code>：动态发现工具，而不是把接口硬编码进提示词。
+          </li>
+          <li>JSON Schema：让模型知道字段类型、必填项和参数含义。</li>
+          <li><code>tools/call</code>：用统一结构调用任何已发现的工具。</li>
+          <li>标准 content：以一致方式返回文本、图片、资源或错误。</li>
+        </ul>
+        <div class="callout green">
+          <strong>关键区别：</strong>REST 解决系统如何请求；MCP 进一步解决 AI
+          如何发现、选择并正确调用能力。
+        </div>
+
+        <h3 id="knowledge-roles">1.3 MCP 的角色与核心能力</h3>
+        <div class="diagram">
+          <div class="flow">
+            <div class="node">
+              <strong>Host</strong><br /><small>网页 GPT 应用</small>
+            </div>
+            <div class="arrow">↔</div>
+            <div class="node accent">
+              <strong>Client</strong><br /><small>维护 MCP 连接</small>
+            </div>
+            <div class="arrow">↔</div>
+            <div class="node">
+              <strong>Server</strong><br /><small>dev-panel</small>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <strong>Host：承载体验</strong>
+            <p>负责用户界面、模型对话、上下文管理和完整任务体验。</p>
+          </div>
+          <div class="card">
+            <strong>Client：维护连接</strong>
+            <p>完成初始化、获取能力，并把模型选择转换成协议请求。</p>
+          </div>
+          <div class="card">
+            <strong>Server：提供能力</strong>
+            <p>声明并执行工具，不负责模型推理，也不依赖特定模型。</p>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="number">T</div>
+            <strong>Tools</strong>
+            <p>模型调用的动作：搜索代码、修改文件、运行测试。</p>
+          </div>
+          <div class="card">
+            <div class="number">R</div>
+            <strong>Resources</strong>
+            <p>应用读取的上下文：文件、Schema、文档或数据。</p>
+          </div>
+          <div class="card">
+            <div class="number">P</div>
+            <strong>Prompts</strong>
+            <p>用户选择的模板：代码审查或故障诊断流程。</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>能力</th>
+              <th>典型控制方</th>
+              <th>核心语义</th>
+              <th>dev-panel 场景</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tools</td>
+              <td>模型</td>
+              <td>执行动作</td>
+              <td>搜索、修改、运行测试</td>
+            </tr>
+            <tr>
+              <td>Resources</td>
+              <td>应用</td>
+              <td>读取可寻址上下文</td>
+              <td>项目概览、依赖信息</td>
+            </tr>
+            <tr>
+              <td>Prompts</td>
+              <td>用户</td>
+              <td>选择可复用模板</td>
+              <td>代码审查、故障诊断</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout green">
+          <strong>当前重点：</strong>dev-panel 主要实现
+          Tools，因为项目目标是给网页 GPT 增加本地操作能力。
+        </div>
+
+        <h3 id="knowledge-server">1.4 MCP Server 是怎么实现的</h3>
+        <p>
+          一个可工作的 MCP Server
+          并不等于“写几个工具函数”。它至少包含协议、传输、能力、执行与安全五层。
+        </p>
+        <div class="layer">
+          <strong>协议层</strong>理解 JSON-RPC，处理
+          initialize、tools/list、tools/call、通知与错误。
+        </div>
+        <div class="layer">
+          <strong>传输层</strong>从 stdio 或 Streamable HTTP
+          接收消息，并维护连接或 Session。
+        </div>
+        <div class="layer">
+          <strong>能力层</strong>用名称、描述、JSON Schema 和 annotations
+          声明工具。
+        </div>
+        <div class="layer">
+          <strong>执行层</strong>把 tools/call 分发给 Handler，将业务结果转换成
+          MCP content。
+        </div>
+        <div class="layer">
+          <strong>安全层</strong
+          >完成认证、参数校验、路径限制、命令权限、超时和审计。
+        </div>
+        <h3 id="knowledge-sdk">手写协议与官方 SDK</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>实现方式</th>
+              <th>需要自己处理</th>
+              <th>优势</th>
+              <th>适用阶段</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>手写最小协议</td>
+              <td>JSON-RPC、版本、Schema、Transport、Session</td>
+              <td>理解原理、控制直接</td>
+              <td>学习与原型验证</td>
+            </tr>
+            <tr>
+              <td><strong>官方 SDK</strong></td>
+              <td>主要聚焦 Tool Handler 与业务逻辑</td>
+              <td>兼容性、类型与维护成本更好</td>
+              <td>正式接入与长期维护</td>
+            </tr>
+          </tbody>
+        </table>
+        <pre><code>// SDK 风格的核心结构（示意）
+const server = new McpServer({ name: "dev-panel", version: "0.1.0" });
+
+server.registerTool("read_file", schema, async ({ path }) => {
+  return { content: [{ type: "text", text: readWorkspaceFile(path) }] };
+});
+
+await server.connect(streamableHttpTransport);</code></pre>
+
+        <h3 id="knowledge-skill">1.5 MCP 与 Skill 的区别</h3>
+        <p>
+          Skill 和 MCP 经常同时出现，但解决的是完全不同的问题。Skill
+          是可复用的工作流知识；MCP 是连接实时工具和外部上下文的协议。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>六个对比维度</th>
+              <th>Skill</th>
+              <th>MCP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>① 主要形态</strong></td>
+              <td>指令、参考资料与可选脚本组成的工作流包</td>
+              <td>运行中的协议服务</td>
+            </tr>
+            <tr>
+              <td><strong>② 解决的问题</strong></td>
+              <td>告诉 Agent 一类任务应该<strong>怎样做</strong></td>
+              <td>告诉 Agent 当前有哪些<strong>外部能力可以用</strong></td>
+            </tr>
+            <tr>
+              <td><strong>③ 实时数据</strong></td>
+              <td>单独不能自动获取；需要调用已有工具或附带脚本</td>
+              <td>Tool 与 Resource 可在运行时访问实时外部系统</td>
+            </tr>
+            <tr>
+              <td><strong>④ 复用单位</strong></td>
+              <td>复用工作流，例如“如何制作高质量 PDF”</td>
+              <td>复用能力接口，例如“读取文件”或“查询订单”</td>
+            </tr>
+            <tr>
+              <td><strong>⑤ 加载与运行</strong></td>
+              <td>被选中后，将完整说明加载进模型上下文</td>
+              <td>通过初始化与工具发现提供定义，再按需远程调用</td>
+            </tr>
+            <tr>
+              <td><strong>⑥ 标准化程度</strong></td>
+              <td>具体实现会因 Agent 产品而略有差异</td>
+              <td>跨客户端复用的开放协议</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="diagram">
+          <div class="flow">
+            <div class="node">
+              <strong>Skill</strong><br /><small
+                >先搜索 → 再阅读 → 修改后运行测试</small
+              >
+            </div>
+            <div class="arrow">指导</div>
+            <div class="node accent">
+              <strong>Agent</strong><br /><small>规划与决策</small>
+            </div>
+            <div class="arrow">调用</div>
+            <div class="node">
+              <strong>MCP Tools</strong><br /><small
+                >search · read · patch · test</small
+              >
+            </div>
+          </div>
+        </div>
+        <ul class="checklist">
+          <li>Skill 被选择后，加载完整工作流说明，提升一类任务的稳定性。</li>
+          <li>MCP Server 在运行时暴露实时 Tools、Resources 与 Prompts。</li>
+          <li>Skill 单独不能自动获得实时外部数据，需要脚本或工具配合。</li>
+          <li>Plugin 更接近分发单位，可以同时打包多个 Skills 和 MCP 配置。</li>
+        </ul>
+        <div class="callout">
+          <strong>组合示例：</strong>“代码修复
+          Skill”规定先搜索、再阅读、修改后必须测试和检查 Diff；真正执行
+          search、read、patch、test 的是 dev-panel MCP Tools。
+        </div>
+        <div class="big-point">
+          Skill 教 AI“怎么做”，MCP 给 AI“用什么做”。最佳实践通常是组合：Skill
+          编排流程，MCP 提供实时能力。
+        </div>
+
+        <h3 id="knowledge-jsonrpc">1.6 JSON-RPC：MCP 消息的统一外壳</h3>
+        <p>
+          MCP 消息统一使用 JSON-RPC 2.0 表达。JSON-RPC
+          定义请求、响应、通知和错误结构；MCP 再定义
+          initialize、tools/list、tools/call 等具体方法。
+        </p>
+        <pre><code>{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "tools/call",
+  "params": {
+    "name": "search_text",
+    "arguments": { "pattern": "PermissionChecker", "path": "src" }
+  }
+}</code></pre>
+        <div class="grid two">
+          <div class="card">
+            <strong>Request</strong>
+            <p>包含 id、method、params，需要服务端返回响应。</p>
+          </div>
+          <div class="card">
+            <strong>Response</strong>
+            <p>通过相同 id 对应请求，包含 result 或 error。</p>
+          </div>
+          <div class="card">
+            <strong>Notification</strong>
+            <p>没有 id，不需要服务端返回结果。</p>
+          </div>
+          <div class="card">
+            <strong>Tool Result</strong>
+            <p>文本、图片和错误等内容放在 JSON-RPC result 中。</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>字段</th>
+              <th>作用</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>id</code></td>
+              <td>关联并发请求与响应；Notification 没有 id</td>
+            </tr>
+            <tr>
+              <td><code>method</code></td>
+              <td>表示要执行的 MCP 方法</td>
+            </tr>
+            <tr>
+              <td><code>params</code></td>
+              <td>方法所需的结构化参数</td>
+            </tr>
+            <tr>
+              <td><code>result / error</code></td>
+              <td>响应只能返回成功结果或协议错误之一</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <strong>两类错误：</strong>未知 method 属于 JSON-RPC/MCP
+          协议错误；合法 tools/call 中的“文件不存在”属于工具执行错误，通常通过
+          content + isError 返回给模型。
+        </div>
+
+        <h3 id="knowledge-lifecycle">1.7 初始化与协议版本协商</h3>
+        <ol class="timeline">
+          <li>
+            <strong>initialize</strong
+            ><br />客户端提交协议版本、能力和客户端信息。
+          </li>
+          <li>
+            <strong>版本协商</strong
+            ><br />服务端选择双方都支持的版本，防止双方按不同规则解析消息。
+          </li>
+          <li>
+            <strong>能力协商</strong><br />服务端声明
+            Tools、Resources、Prompts、Logging 等能力。
+          </li>
+          <li>
+            <strong>notifications/initialized</strong
+            ><br />客户端确认握手完成，开始正式调用。
+          </li>
+        </ol>
+        <div class="callout">
+          <strong>为什么需要协商？</strong
+          >协议版本可能改变字段、传输行为和能力语义。没有协商，双方可能“能连上，却说着不同版本的语言”。
+        </div>
+
+        <h3 id="knowledge-transport">1.8 传输方式：stdio 与 Streamable HTTP</h3>
+        <div class="grid two">
+          <div class="card">
+            <strong>stdio</strong>
+            <p>
+              Client 启动本地 Server 子进程，通过标准输入输出传递 JSON-RPC。适合
+              IDE 和桌面客户端。
+            </p>
+            <p>
+              <span class="tag">本机</span><span class="tag">无需端口</span>
+            </p>
+          </div>
+          <div class="card">
+            <strong>Streamable HTTP</strong>
+            <p>
+              Server 提供远程 HTTP Endpoint。网页 GPT
+              位于云端，因此本项目采用这一方向。
+            </p>
+            <p><span class="tag">远程</span><span class="tag">可认证</span></p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>问题</th>
+              <th>stdio</th>
+              <th>Streamable HTTP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Server 如何启动</td>
+              <td>Client 启动子进程</td>
+              <td>Server 独立运行并监听 Endpoint</td>
+            </tr>
+            <tr>
+              <td>是否暴露网络端口</td>
+              <td>否</td>
+              <td>是</td>
+            </tr>
+            <tr>
+              <td>典型场景</td>
+              <td>本地 IDE、桌面客户端</td>
+              <td>云端网页 GPT、跨设备调用</td>
+            </tr>
+            <tr>
+              <td>额外问题</td>
+              <td>进程生命周期</td>
+              <td>认证、Session、代理与网络安全</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="big-point">
+          HTTP 解决“服务能被网络调用”，但 localhost
+          仍然只属于本机。云端访问还需要跨越 NAT 与防火墙。
+        </div>
+
+        <h3 id="knowledge-tunnel">1.9 内网穿透、反向隧道与认证</h3>
+        <p>
+          <strong>内网穿透</strong
+          >不是某一种固定协议，而是一类让公网访问内网服务的技术方案。它要解决的是：服务只有私有地址、位于
+          NAT 后、没有公网入站路径。
+        </p>
+        <p>
+          常见私有地址包括 <code>10.0.0.0/8</code>、<code>172.16.0.0/12</code>
+          和 <code>192.168.0.0/16</code>。它们只在局域网有效，不会被公网路由。
+        </p>
+        <div class="grid">
+          <div class="card">
+            <div class="number">1</div>
+            <strong>localhost</strong>
+            <p><code>127.0.0.1</code> 始终表示请求发起者自己。</p>
+          </div>
+          <div class="card">
+            <div class="number">2</div>
+            <strong>NAT</strong>
+            <p>内网地址不能在公网路由，公网不知道请求应转发给谁。</p>
+          </div>
+          <div class="card">
+            <div class="number">3</div>
+            <strong>防火墙</strong>
+            <p>默认拒绝公网主动连接本机端口。</p>
+          </div>
+        </div>
+        <h3 id="knowledge-network">几种容易混淆的网络概念</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>概念</th>
+              <th>作用</th>
+              <th>是否解决公网到内网</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>端口映射</td>
+              <td>路由器把公网端口转发到某台内网机器</td>
+              <td>可以，但需要公网 IP 和路由权限</td>
+            </tr>
+            <tr>
+              <td>VPN / Mesh</td>
+              <td>把受控设备加入同一个虚拟网络</td>
+              <td>可以，适合受控客户端</td>
+            </tr>
+            <tr>
+              <td><strong>反向隧道</strong></td>
+              <td>内网客户端主动连接公网中继，再反向传递请求</td>
+              <td>可以，无需开放入站端口</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="diagram">
+          <div class="flow">
+            <div class="node">网页 GPT</div>
+            <div class="arrow">→</div>
+            <div class="node">公网 HTTPS</div>
+            <div class="arrow">→</div>
+            <div class="node">Cloudflare Edge</div>
+            <div class="arrow">⇢</div>
+            <div class="node">cloudflared</div>
+            <div class="arrow">→</div>
+            <div class="node accent">localhost /mcp</div>
+          </div>
+        </div>
+        <p>
+          cloudflared 从本机主动建立出站长连接，Cloudflare 提供公网 HTTPS
+          地址，再沿现有 Tunnel 把请求转发回本地服务。
+        </p>
+        <ol class="timeline">
+          <li>
+            <strong>连接建立</strong><br />cloudflared 主动向 Cloudflare
+            网络发起出站连接，绕开入站防火墙限制。
+          </li>
+          <li>
+            <strong>公网路由</strong><br />随机 trycloudflare.com
+            地址或固定域名映射到对应 Tunnel。
+          </li>
+          <li>
+            <strong>请求转发</strong><br />Cloudflare Edge 接收 HTTPS
+            请求，经长连接转给本机 connector。
+          </li>
+          <li>
+            <strong>访问 Origin</strong><br />cloudflared 再访问
+            <code>http://127.0.0.1:8765/mcp</code>，响应沿原路返回。
+          </li>
+        </ol>
+        <div class="callout">
+          <strong>注意：</strong>Tunnel 隐藏了本机公网 IP
+          并避免开放入站端口，但它不等于应用认证。公开 Endpoint 仍需
+          OAuth、Bearer Token 或 Zero Trust 策略。
+        </div>
+        <div class="layer">
+          <strong>网络层</strong>Tunnel 解决“能不能到达”。
+        </div>
+        <div class="layer">
+          <strong>身份层</strong>OAuth 或 Bearer Token 解决“调用者是谁”。
+        </div>
+        <div class="layer">
+          <strong>权限层</strong>Tool Profile、Permission Mode、Workspace
+          解决“允许做什么”。
+        </div>
+      </section>
+
+      <section id="workflow">
+        <div class="eyebrow">PART 02 · 9 MIN</div>
+        <h2>整体流程</h2>
+        <p class="lead">
+          从用户在网页 GPT 中提出任务，到本地代码被读取、修改、验证和审查。
+        </p>
+
+        <h3 id="workflow-overview">2.1 系统全景</h3>
+        <div class="diagram">
+          <div class="flow">
+            <div class="node">
+              <strong>用户</strong><br /><small>描述开发任务</small>
+            </div>
+            <div class="arrow">→</div>
+            <div class="node">
+              <strong>网页 GPT</strong><br /><small>理解与规划</small>
+            </div>
+            <div class="arrow">→</div>
+            <div class="node">
+              <strong>MCP + Tunnel</strong><br /><small>协议与连接</small>
+            </div>
+            <div class="arrow">→</div>
+            <div class="node accent">
+              <strong>dev-panel</strong><br /><small>受控执行</small>
+            </div>
+            <div class="arrow">→</div>
+            <div class="node">
+              <strong>Workspace</strong><br /><small>文件 · Git · Shell</small>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="number">脑</div>
+            <strong>推理在网页端</strong>
+            <p>复用网页 GPT 的模型、上下文管理和对话体验。</p>
+          </div>
+          <div class="card">
+            <div class="number">桥</div>
+            <strong>连接由 MCP 承担</strong>
+            <p>工具自描述，消息格式与传输方式标准化。</p>
+          </div>
+          <div class="card">
+            <div class="number">手</div>
+            <strong>执行留在本地</strong>
+            <p>源码、依赖、Git 和构建环境无需迁移到云端 Agent。</p>
+          </div>
+        </div>
+        <ol class="timeline">
+          <li>用户在网页 GPT 中描述目标，网页端模型负责理解和拆分任务。</li>
+          <li>
+            MCP Client 把 Server 工具描述交给模型，并将工具选择转成 JSON-RPC。
+          </li>
+          <li>请求通过公网 HTTPS 和 Tunnel 回到本机 dev-panel。</li>
+          <li>
+            dev-panel 校验身份、工具、参数、Workspace 和权限后执行 Handler。
+          </li>
+          <li>结果返回网页 GPT，成为下一步推理所需的动态上下文。</li>
+        </ol>
+        <div class="callout">
+          <strong>不是 SSH：</strong>模型没有获得任意登录权限，只能调用 Server
+          明确注册并通过权限检查的有限工具。
+        </div>
+
+        <h3 id="workflow-architecture">2.2 dev-panel 内部架构</h3>
+        <div class="diagram">
+          <div class="flow">
+            <div class="node">HTTP / stdio<br /><small>Transport</small></div>
+            <div class="arrow">→</div>
+            <div class="node">MCPProtocol<br /><small>JSON-RPC</small></div>
+            <div class="arrow">→</div>
+            <div class="node accent">Runtime</div>
+            <div class="arrow">→</div>
+            <div class="node">Tool Registry</div>
+            <div class="arrow">→</div>
+            <div class="node">Handlers</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>模块</th>
+              <th>职责</th>
+              <th>项目价值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Transport</td>
+              <td>接收 HTTP 或 stdio 消息</td>
+              <td>协议不绑定单一通道</td>
+            </tr>
+            <tr>
+              <td>MCPProtocol</td>
+              <td>处理 initialize、tools/list、tools/call</td>
+              <td>把 JSON-RPC 转成 Runtime 调用</td>
+            </tr>
+            <tr>
+              <td>Runtime</td>
+              <td>统一 Workspace、权限、工具和 Session</td>
+              <td>所有入口共享执行边界</td>
+            </tr>
+            <tr>
+              <td>Tool Registry</td>
+              <td>注册、枚举、校验和分发工具</td>
+              <td>工具定义与执行解耦</td>
+            </tr>
+            <tr>
+              <td>Dashboard</td>
+              <td>配置 Workspace、认证和 Tunnel</td>
+              <td>让本地 MCP 服务可视化</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="workflow-connect">2.3 接入流程</h3>
+        <ol class="timeline">
+          <li>
+            <strong>配置本地服务</strong><br />选择 Workspace、端口、工具
+            Profile 和权限模式。
+          </li>
+          <li>
+            <strong>启动 MCP Endpoint</strong><br />dev-panel 在本地提供
+            <code>/mcp</code>。
+          </li>
+          <li>
+            <strong>建立 Tunnel</strong><br />cloudflared 获得公网 HTTPS
+            地址并转发到本机。
+          </li>
+          <li>
+            <strong>网页 GPT 接入</strong><br />添加 MCP Endpoint，完成
+            OAuth、初始化与工具发现。
+          </li>
+          <li>
+            <strong>执行任务</strong><br />GPT
+            根据任务反复调用本地工具，直到完成验证。
+          </li>
+        </ol>
+        <div class="callout green">
+          <strong>接入完成的标志：</strong>不只是页面显示
+          Connected，而是客户端完成 OAuth、initialize 与
+          tools/list，模型能够看到并选择本地工具。
+        </div>
+
+        <h3 id="workflow-toolcall">2.4 一次 tools/call 如何执行</h3>
+        <ol class="timeline">
+          <li>网页 GPT 选择 <code>search_text</code> 并构造 JSON-RPC 请求。</li>
+          <li>请求通过 HTTPS Tunnel 到达本机 <code>/mcp</code>。</li>
+          <li>Protocol 校验 JSON-RPC、初始化状态和方法。</li>
+          <li>Runtime 在 Registry 中寻找工具并检查必填参数。</li>
+          <li>
+            Registry 调用具体 Handler；文件与搜索 Handler 使用 Workspace
+            校验路径，只有命令 Handler 会额外使用 PermissionChecker
+            检查命令策略。
+          </li>
+          <li>ToolResponse 转换为 MCP content，沿原链路返回网页 GPT。</li>
+        </ol>
+        <pre><code>网页 GPT
+  → tools/call(search_text)
+  → HTTPS Tunnel
+  → MCPProtocol.handleRequest()
+  → Runtime.callTool()
+  → ToolRegistry.call()
+  → searchTextHandler()
+  → Workspace 内的真实搜索结果</code></pre>
+        <div class="callout">
+          <strong>动态上下文：</strong>一次工具结果不是终点。GPT
+          会根据搜索结果决定继续 read_file、apply_patch 或
+          exec_command，逐步收敛任务。
+        </div>
+
+        <h3 id="workflow-security">2.5 工具能力与安全边界</h3>
+        <div class="callout">
+          <strong>PermissionChecker 是什么？</strong>它是
+          <code>exec_command</code> 执行前的命令策略检查器，根据
+          safe、trusted、dangerous 模式判断网络命令、破坏性命令、Shell
+          展开和内联脚本是否允许，并过滤敏感环境变量。它不是所有 Handler
+          都会经过的统一中间件。
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>类别</th>
+              <th>工具</th>
+              <th>安全特征</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>读取</td>
+              <td>read_file / list_files / search_text</td>
+              <td>限制在 Workspace</td>
+            </tr>
+            <tr>
+              <td>Git</td>
+              <td>status / diff / log / blame</td>
+              <td>默认只读</td>
+            </tr>
+            <tr>
+              <td>修改</td>
+              <td>apply_patch</td>
+              <td>结构化、可审查</td>
+            </tr>
+            <tr>
+              <td>命令</td>
+              <td>exec_command / write_stdin / kill_session</td>
+              <td>Permission Mode + Session</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="layer"><strong>身份边界</strong>谁能连接服务。</div>
+        <div class="layer"><strong>能力边界</strong>客户端能看到哪些工具。</div>
+        <div class="layer"><strong>文件边界</strong>工具能访问哪些目录。</div>
+        <div class="layer"><strong>命令边界</strong>Shell 能执行哪些动作。</div>
+        <div class="layer">
+          <strong>生命周期</strong>如何继续读取或终止长任务。
+        </div>
+        <div class="big-point">
+          最安全的做法不是提醒模型“不要使用危险能力”，而是从工具注册、Workspace
+          和系统权限层面让它无法越界。
+        </div>
+      </section>
+
+      <section id="showcase">
+        <div class="eyebrow">PART 03 · 5 MIN</div>
+        <h2>效果展示</h2>
+        <p class="lead">从网页对话开始，在本地文件变更和测试结果中结束。</p>
+        <video
+          class="video-player"
+          controls
+          playsinline
+          preload="metadata"
+          src="https://p5-plat.wskwai.com/udata/pkg/doodle_static/hejinlin-resource/dev-panel.mov"
+        >
+          当前浏览器无法播放该视频，请
+          <a
+            href="https://p5-plat.wskwai.com/udata/pkg/doodle_static/hejinlin-resource/dev-panel.mov"
+            >打开原始文件</a
+          >。
+        </video>
+        <!-- <h3>3.2 视频内容</h3>
+        <pre><code>User: 找到项目的权限检查逻辑，解释 safe 模式，然后补一个测试
+
+GPT → search_text("PermissionChecker")
+GPT → read_file("src/runtime/permissions.ts")
+GPT → list_files("**/*test*")
+GPT → apply_patch(...)
+GPT → exec_command("npm test")
+GPT → git_diff()</code></pre>
+        <ol class="timeline">
+          <li>启动 dev-panel 并选择受控 Workspace。</li>
+          <li>建立 Tunnel，获得公网 MCP Endpoint。</li>
+          <li>网页 GPT 完成授权、初始化与工具发现。</li>
+          <li>搜索并阅读权限逻辑，找到需要修改的位置。</li>
+          <li>应用 Patch、运行测试，最后检查 Git Diff。</li>
+        </ol> -->
+        <!-- <h3 id="showcase-analysis">3.1 效果拆解</h3>
+        <table>
+          <thead><tr><th>阶段</th><th>GPT 的决策</th><th>本地发生的动作</th><th>展示价值</th></tr></thead>
+          <tbody>
+            <tr><td>理解</td><td>搜索并读取相关源码</td><td>从真实 Workspace 获取上下文</td><td>不再人工复制代码</td></tr>
+            <tr><td>修改</td><td>生成精确 Patch</td><td>本地文件发生可追踪变更</td><td>不只是给出建议</td></tr>
+            <tr><td>验证</td><td>选择测试命令</td><td>使用本机依赖运行</td><td>结果形成闭环</td></tr>
+            <tr><td>审查</td><td>总结改动与风险</td><td>Git Diff 展示最终结果</td><td>过程可以检查</td></tr>
+          </tbody>
+        </table> -->
+        <div class="big-point">
+          最终体验：网页 GPT 负责思考，本地 dev-panel
+          负责执行；用户仍然拥有最后的审查与授权权力。
+        </div>
+      </section>
+
+      <section id="summary">
+        <div class="eyebrow">PART 04 · 3 MIN</div>
+        <h2>总结与思考</h2>
+        <p class="lead">
+          dev-panel 验证了网页 GPT 远程调用本地开发工具的完整链路。
+        </p>
+        <div class="grid">
+          <div class="card">
+            <div class="number">1</div>
+            <strong>复用网页 GPT</strong>
+            <p>减少对额外模型 API 额度的依赖。</p>
+          </div>
+          <div class="card">
+            <div class="number">2</div>
+            <strong>MCP 标准化能力</strong>
+            <p>工具可以被发现、理解、调用和复用。</p>
+          </div>
+          <div class="card">
+            <div class="number">3</div>
+            <strong>Tunnel 打通网络</strong>
+            <p>让云端请求抵达 NAT 后的本地服务。</p>
+          </div>
+        </div>
+        <ul class="checklist">
+          <li>网页 GPT 继续提供模型与交互体验，减少额外 API Agent 的依赖。</li>
+          <li>MCP 统一工具发现、参数描述、调用和结果表达。</li>
+          <li>Tunnel 让云端请求抵达 NAT 后的本地服务。</li>
+          <li>认证与 Runtime 权限把执行范围限制在可控边界内。</li>
+        </ul>
+        <h3 id="summary-boundary">当前边界</h3>
+        <div class="grid two">
+          <div class="card">
+            <strong>手写最小 MCP 协议</strong>
+            <p>便于理解原理，但正式兼容应逐步迁移官方 SDK。</p>
+          </div>
+          <div class="card">
+            <strong>Quick Tunnel</strong>
+            <p>适合演示和临时连接，不适合长期生产入口。</p>
+          </div>
+          <div class="card">
+            <strong>字符串级命令检查</strong>
+            <p>可以降低常见风险，但不能替代容器和操作系统隔离。</p>
+          </div>
+          <div class="card">
+            <strong>认证与权限仍需收敛</strong>
+            <p>所有公网入口必须使用一致的身份与最小权限策略。</p>
+          </div>
+        </div>
+        <div class="big-point">
+          网页 GPT 提供大脑，MCP 提供标准接口，Tunnel 提供连接，dev-panel
+          提供本地的眼睛和双手。
+        </div>
+        <h3 id="summary-references">参考资料</h3>
+        <p>
+          <a href="https://developers.openai.com/codex/mcp" target="_blank"
+            >OpenAI Codex · Model Context Protocol</a
+          ><br />
+          <a href="https://developers.openai.com/codex/skills" target="_blank"
+            >OpenAI Codex · Agent Skills</a
+          ><br />
+          <a href="https://modelcontextprotocol.io/" target="_blank"
+            >Model Context Protocol 官方站点</a
+          ><br />
+          <a href="https://developers.cloudflare.com/tunnel/" target="_blank"
+            >Cloudflare Tunnel 官方文档</a
+          >
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const links = [...document.querySelectorAll(".nav-link")];
+      const targets = links
+        .map((link) => document.querySelector(link.getAttribute("href")))
+        .filter(Boolean);
+      const sidebar = document.querySelector(".sidebar");
+      const toggle = document.querySelector(".mobile-toggle");
+      let scrollTicking = false;
+
+      const activate = (id) => {
+        links.forEach((link) =>
+          link.classList.toggle(
+            "active",
+            link.getAttribute("href") === `#${id}`,
+          ),
+        );
+      };
+
+      const syncActiveToScroll = () => {
+        const marker = window.scrollY + 48;
+        let current = targets[0];
+
+        for (const target of targets) {
+          const top = target.getBoundingClientRect().top + window.scrollY;
+          if (top <= marker) current = target;
+          else break;
+        }
+
+        const atBottom =
+          window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 4;
+        if (atBottom) current = targets[targets.length - 1];
+        if (current) activate(current.id);
+        scrollTicking = false;
+      };
+
+      window.addEventListener(
+        "scroll",
+        () => {
+          if (!scrollTicking) {
+            scrollTicking = true;
+            requestAnimationFrame(syncActiveToScroll);
+          }
+        },
+        { passive: true },
+      );
+
+      links.forEach((link) =>
+        link.addEventListener("click", () => {
+          activate(link.getAttribute("href").slice(1));
+          sidebar.classList.remove("open");
+        }),
+      );
+      toggle.addEventListener("click", () => sidebar.classList.toggle("open"));
+      syncActiveToScroll();
+    </script>
+  </body>
+</html>
